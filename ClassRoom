@@ -1,0 +1,521 @@
+/** This is a program that creates a classroom scene  **/
+
+//uncomment the following four lines in case you are using Windows' Visual Studio
+//#include<Windows.h>
+//#include<gl/GL.h>
+//#include<gl/GLU.h>
+//#include<gl/glut.h>
+
+//uncomment the following line in case you are using linux OpenGL
+//#include<GL/glut.h>
+/*
+Linux Implementation:
+compilation-$cc filename.cpp -lGL -lGLU -lglut -lm
+*/
+
+#include<math.h>
+
+void reset();
+void drawGround();
+void drawWalls();
+void drawTable();
+void drawBenches();
+void singleBench();
+
+float eyex=-2,eyey=3,eyez=0,ny=0,nz=0;
+float nx=1;
+float ux,uy,uz;
+float vx,vy,vz;
+float upx=0,upy=1,upz=0;
+
+int theta=45;	//angle used for perspective projection
+
+void myDisplay()
+{
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(theta,64.0/48.0,0.1,100);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(	eyex,eyey,eyez,	nx+eyex,ny+eyey,nz+eyez,	upx,upy,upz);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	drawGround();
+	drawWalls();
+	drawTable();
+	drawBenches();
+	glColor3d(0.1,0.1,1);
+	glFlush();
+}
+
+void drawBenches()		//a function to draw benches by recursively calling singleBench()
+{
+	int imax=4,jmax=4;	//maximum number of benches
+	int idis=4,jdis=4;	//dimension belonging to a bench
+	glPushMatrix();
+	glTranslated(-(imax+0.0)*idis/2.0,0,-(jmax+0.0)*jdis/2.0 + 2);
+	for(int i=0;i<imax;i++)		//number or rows of benches
+	{
+		for(int j=0;j<jmax;j++)	//number of columns of benches
+		{
+			singleBench();
+			glTranslated(0,0,jdis);	//set poition for next bench
+		}
+		glTranslated(idis,0,-jdis*jmax);		//reset poition
+	}
+	glPopMatrix();
+}
+
+void singleBench()		//a function to draw just one bench
+{
+	//start drawing a student's table
+	glPushMatrix();
+	glTranslated(0,1.5,0);
+	glScaled(1.2,0.1,2);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();		//done drawing table top
+
+	glPushMatrix();
+	glTranslated(0.5,0.75,0.9);
+	glScaled(0.1,1.5,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslated(-0.5,0.75,0.9);
+	glScaled(0.1,1.5,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslated(-0.5,0.75,-0.9);
+	glScaled(0.1,1.5,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslated(0.5,0.75,-0.9);
+	glScaled(0.1,1.5,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();			//draw 4 table legs
+
+	glPushMatrix();
+	glTranslated(-1,0.9,0);
+	glScaled(1,0.1,1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();			//draw chair seat
+	glPushMatrix();
+	glTranslated(-0.6,0.45,0.4);
+	glScaled(0.1,0.9,0.1);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glutSolidCube(1.0);
+	glPopMatrix();			//draw right front leg
+	glPushMatrix();
+	glTranslated(-0.6,0.45,-0.4);
+	glScaled(0.1,0.9,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();			//draw left front leg
+	glPushMatrix();
+	glTranslated(-1.4,0.8,0.4);
+	glScaled(0.1,1.6,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();			//draw right back leg
+	glPushMatrix();
+	glTranslated(-1.4,0.8,-0.4);
+	glScaled(0.1,1.6,0.1);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();			//draw left back leg
+	glPushMatrix();
+	glTranslated(-1.4,1.55,0);
+	glScaled(0.1,0.1,0.8);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();			//draw top part
+}
+
+void drawTable()		//functoin to draw the teacher's table
+{
+	glPushMatrix();
+	glColor3f(0.6,0.45,0.15);		//brown
+	glTranslated(8,2.2,-2);
+	glScaled(2,0.14,4);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();	//table top
+
+	glPushMatrix();
+	glTranslated(7.1,1.3,-0.1);
+	glScaled(0.12,1.7,0.12);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslated(7.1,1.3,-3.9);
+	glScaled(0.12,1.7,0.12);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslated(8.9,1.3,-3.9);
+	glScaled(0.12,1.7,0.12);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();
+	glPushMatrix();
+	glTranslated(8.9,1.3,-0.1);
+	glScaled(0.12,1.7,0.12);
+	glutSolidCube(1.0);
+	glScaled(1.001,1.001,1.001);
+	glColor3f(0.0,0.0,0.0);
+	glutWireCube(1.0);
+	glColor3f(0.6,0.45,0.15);
+	glPopMatrix();	//draw 4 legs of the table
+}
+
+void drawTile(int i, int j, int s, float m)		//s is the size of the tile
+{												//m is the margin of each tile
+	glBegin(GL_QUADS);
+		glVertex3f(i+m,0,j+m);
+		glVertex3f(i+m,0,j+s-m);
+		glVertex3f(i+s-m,0,j+s-m);
+		glVertex3f(i+s-m,0,j+m);
+	glEnd();		//draw each tile
+}
+
+void drawGround()
+{
+	glColor3f(0.7,1,0.7);
+	glPushMatrix();
+	glBegin(GL_QUADS);
+		glVertex3f(100,0,100);
+		glVertex3f(100,0,-100);
+		glVertex3f(-100,0,-100);
+		glVertex3f(-100,0,100);		//draw grassy ground
+		glColor3f(0.7,0.7,0.7);
+		glVertex3f(-10,0.02,-10);
+		glVertex3f(-10,0.02,10);
+		glVertex3f(10,0.02,10);
+		glVertex3f(10,0.02,-10);	//draw floor of classroom
+	glEnd();
+	glTranslated(-10,0.03,-10);
+	glColor3f(0.8,0.8,0.8);
+	for(int i=0;i<20;i++)
+		for(int j=0;j<20;j++)
+		{
+			drawTile(i,j,1,0.05);		//draw 20x20 tiles in the classroom
+		}
+	glPopMatrix();
+
+	glPushMatrix();			//drawing the teacher's platform
+	glTranslated(8.5,0.3,0);
+	glScaled(2.98,0.6,9);
+	glutSolidCube(1.0);
+	glColor3f(0.2,0.2,0.2);
+	glScaled(1.01,1.01,1.01);
+	glutWireCube(1.0);
+	glPopMatrix();
+	
+	glPushMatrix();			//draw top of platform
+	glColor3f(0.88,0.88,0.88);
+	glTranslated(0,0.605,0);
+	glBegin(GL_QUADS);
+		glVertex3f(7,0,4.5);
+		glVertex3f(7,0,-4.5);
+		glVertex3f(9.99,0,-4.5);
+		glVertex3f(9.99,0,4.5);
+	glEnd();
+	glPopMatrix();
+
+}
+
+void drawBoardBorder()
+{
+	glColor3f(0.5,0.35,0.05);		//color of the border (brown)
+	float t=0.05;		//thickness of the border
+
+	glPushMatrix();
+	glTranslated(9.97,3.25,3+t);
+	glPushMatrix();
+	glScaled(0.05,2.5+t,3*t);
+	glutSolidCube(1.0);		//right border
+	glPopMatrix();
+	glTranslated(0,0,-6-(2*t));
+	glScaled(0.05,2.5+t,3*t);
+	glutSolidCube(1.0);		//left border
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslated(9.97,2-t,0);
+	glPushMatrix();
+	glScaled(0.05,3*t,6+5*t);
+	glutSolidCube(1.0);		//bottom border
+	glPopMatrix();
+	glTranslated(0,2.5+2*t,0);
+	glScaled(0.05,3*t,6+5*t);
+	glutSolidCube(1.0);		//top border
+	glPopMatrix();
+
+	//drawing chalk
+	glPushMatrix();
+	glColor3f(1.0,1.0,1.0);
+	glTranslated(9.96,2.03,2);
+	glPushMatrix();
+	glScaled(0.03,0.03,0.2);
+	glutSolidCube(1.0);
+	glPopMatrix();
+	glTranslated(0,0,0.5);
+	glScaled(0.03,0.03,0.25);
+	glutSolidCube(1.0);
+	glPopMatrix();
+}
+
+void drawWalls()
+{
+	glPushMatrix();			//drawing the walls
+		glPushMatrix();
+		glColor3f(0.8,0.8,0.65);
+		glTranslated(10.5,3,9);
+		glScaled(1,6,4);
+		glutSolidCube(1.0);
+		glPopMatrix();
+		glPushMatrix();
+		glTranslated(10.5,5,6);
+		glScaled(1,2,2);
+		glutSolidCube(1.0);
+		glPopMatrix();
+		glPushMatrix();
+		glTranslated(10.5,3,-3);
+		glScaled(1,6,16);
+		glutSolidCube(1.0);
+		glPopMatrix();
+
+		glPushMatrix();
+		glTranslated(-10.5,3,0);
+		glScaled(1,6,22);
+		glutSolidCube(1.0);
+		glPopMatrix();
+		glPushMatrix();
+		glTranslated(0,3,10.5);
+		glScaled(22,6,1);
+		glutSolidCube(1.0);
+		glPopMatrix();
+		glPushMatrix();
+		glTranslated(0,3,-10.5);
+		glScaled(22,6,1);
+		glutSolidCube(1.0);
+		glPopMatrix();
+	glPopMatrix();			//finish drawing walls
+	
+	glPushMatrix();
+		glColor3f(0.9,0.9,0.6);		//door color
+		glTranslated(9,2,6.95);
+		glScaled(2,4,0.1);
+		glutSolidCube(1.0);
+		glColor3f(0.2,0.2,0.2);
+		glScaled(1.01,1.01,1.01);
+		glutWireCube(1.0);
+	glPopMatrix();		//finish drawing door
+	glPushMatrix();
+		glBegin(GL_QUADS);
+		glColor3f(0.8,0.8,0.8);		//ceiling color
+		glVertex3f(11,6.03,11);
+		glVertex3f(11,6.03,-11);
+		glVertex3f(-11,6.03,-11);
+		glVertex3f(-11,6.03,11);		//draw ceiling
+		glColor3f(0.3,0.7,0.3);		//board green color
+		glVertex3f(10-0.001,2,3);
+		glVertex3f(10-0.001,4.5,3);
+		glVertex3f(10-0.001,4.5,-3);
+		glVertex3f(10-0.001,2,-3);		//draw board
+	glEnd();
+	//draw ceiling tiles:
+	glColor3f(0.9,0.9,0.9);
+	glPushMatrix();
+	glTranslated(-10,5.95,-10);
+	for(int i=0;i<20;i+=2)
+		for(int j=0;j<20;j+=2)
+		{
+			drawTile(i,j,2,0.06);
+		}
+		glPopMatrix();	
+	drawBoardBorder();
+	glPopMatrix();
+}
+
+void reset()		//reset all u, v values and make u,v,n unit vectors
+{
+	float c=sqrt(nx*nx+ny*ny+nz*nz);
+	//make n unit vector
+	nx=nx/c;
+	ny=ny/c;
+	nz=nz/c;
+	//get u vector
+	ux=nz*upy-ny*upz;
+	uy=nx*upz-nz*upx;
+	uz=ny*upx-nx*upy;
+	//get v vector
+	vx=ny*uz-nz*uy;
+	vy=nz*ux-nx*uz;
+	vz=nx*uy-ny*ux;
+	gluLookAt(	eyex,eyey,eyez,	nx+eyex,ny+eyey,nz+eyez,	upx,upy,upz);
+}
+
+void keyboard(unsigned char key, int x, int y)
+{
+	switch(key)
+	{
+	case '0':		//move backward
+		eyex-=nx/5;
+		eyey-=ny/5;
+		eyez-=nz/5;
+		break;
+	case '1':
+		break;
+	case '2':		//pan down
+		nx-=vx/18;
+		ny-=vy/18;
+		nz-=vz/18;
+		break;
+	case '3':
+		break;
+	case '4':		//pan left
+		nx+=ux/18;
+		ny+=uy/18;
+		nz+=uz/18;
+		break;
+	case '5':		//move forward
+		eyex+=nx/5;
+		eyey+=ny/5;
+		eyez+=nz/5;
+		break;
+	case '6':		//pan right
+		nx-=ux/18;
+		ny-=uy/18;
+		nz-=uz/18;
+		break;
+	case '7':			//roll leftwards
+		upx+=ux/18;
+		upy+=uy/18;
+		upz+=uz/18;
+		break;
+	case '8':		//pan upwards
+		nx+=vx/18;
+		ny+=vy/18;
+		nz+=vz/18;
+		break;
+	case '9':			//roll rightwards
+		upx-=ux/18;
+		upy-=uy/18;
+		upz-=uz/18;
+		break;
+	case 'i':		//zoom in
+		if(theta>5)
+			theta-=5;
+		break;
+	case 'o':		//zoom out
+		if(theta<75)
+			theta+=5;
+		break;
+	}
+	reset();
+	glutPostRedisplay();
+}
+
+void specialKey(int key, int x,int y)
+{
+	switch(key)
+	{
+	case GLUT_KEY_UP:	//move camera upwards
+		eyex+=vx/5;
+		eyey+=vy/5;
+		eyez+=vz/5;
+		break;
+	case GLUT_KEY_DOWN:	//move camera downwards
+		eyex-=vx/5;
+		eyey-=vy/5;
+		eyez-=vz/5;
+		break;
+	case GLUT_KEY_RIGHT:	//move camera rightwards
+		eyex-=ux/5;
+		eyey-=uy/5;
+		eyez-=uz/5;
+		break;
+	case GLUT_KEY_LEFT:		//move camera leftwards
+		eyex+=ux/5;
+		eyey+=uy/5;
+		eyez+=uz/5;
+		break;
+	}
+	reset();
+	glutPostRedisplay();
+}
+
+int main(int argc, char** argv)
+{
+	glutInit(&argc,argv);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_SINGLE | GLUT_RGB);
+	glutInitWindowSize(640,480);
+	glutInitWindowPosition(300,200);
+	glutCreateWindow("Assignment-2");
+	glutDisplayFunc(myDisplay);
+	glutSpecialFunc(specialKey);
+	glutKeyboardFunc(keyboard);
+	glClearColor(0.7f,0.7f,1.0f,0.0f);
+	glViewport(0,0,640,480);
+
+	glEnable(GL_DEPTH_TEST);
+
+	glutMainLoop();
+	
+	return 0;
+}
