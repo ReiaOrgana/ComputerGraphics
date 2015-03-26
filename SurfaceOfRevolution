@@ -1,0 +1,649 @@
+/** This is a C++ program (store as filename.cpp) that asks the user to select four points on a plane.
+A bezier curve is constructed using them, and a file containing details of a surface of revolution
+formed with this curve along the y-axis is created. This file is in the OFF format.
+The program can also read an OFF file.**/
+
+/** this program runs on LINUX systems only **/
+
+/*
+Compile:	cc a3.c -lGL -lGLU -lglut -lm
+*/
+
+/****************NOTE TO THE USER******************/
+//	This program can read meshes in which each face has 4 or less vertices only.
+
+#include<stdio.h>
+#include<GL/glut.h>
+#include<stdbool.h>
+#include<stdlib.h>
+#include<string.h>
+#include<math.h>
+
+#define TRUE 1
+#define FALSE 0
+
+int win;	//store window id to destroy later.
+
+struct FACE
+{
+	int n;		//stores the number of vertices
+	int v1,v2,v3,v4;	//stores the vertice indices
+};
+typedef struct FACE Face;
+
+struct VERTEX
+{
+	float x,y,z;
+};
+typedef struct VERTEX Vertex;
+
+int NV=11*72;		//no. of Vertices
+int NF=10*72;		//no. of Faces
+int NE=21*72;		//no. of Edges
+
+struct values
+{
+	float x,y,z;
+}a,b,c,d,e,f,g,h,j,k,l;		//stores the 11 initial points required for output
+
+Vertex* V;	//array of Vertices
+Face* F;	//array of Faces
+
+int scrht=480;
+int scrwd=640;
+
+float tvalue=0.1;	//parameter interval for bezier curve
+
+//function declarations
+void drawControlPoints();
+void deCasteljau(float,char);
+
+int i=0;
+int mousex,mousey;
+
+char FNAME[40];
+char* fn=FNAME;
+
+struct point *SelectedPoint;
+bool Selected=false;
+
+int margin=5;
+struct point
+{	float x, y;
+}W,X,Y,Z;
+
+struct point *A=&W;		//The control points
+struct point *B=&X;		//
+struct point *C=&Y;		//
+struct point *D=&Z;		//of the bezier curve
+
+char IN[10];
+
+int getint(FILE* fp)		//retreive next integer from the file
+{
+	char ch=getc(fp);
+	while(!(ch>47 && ch<58))
+		ch=getc(fp);
+	int a=0;
+	while(ch>47 && ch<58)
+	{
+		a*=10;
+		a+=(ch-48);
+		ch=getc(fp);
+	}
+	return a;
+}
+
+float getfloat(FILE* fp)		//retreive next float no. from the file
+{
+	char ch=getc(fp);
+	while(!(ch>47 && ch<58))
+		ch=getc(fp);
+	float a=0;
+	while(ch>47 && ch<58)
+	{
+		a*=10;
+		a+=(ch-48);
+		ch=getc(fp);
+	}
+	if(ch!='.')		//if there is no decimal point, return value as is
+		return a;
+	ch=getc(fp);
+	float y=10;
+	while(ch>47 && ch<58)	//else, add the decimal values
+	{
+		a+=(float)(ch-48)/y;
+		y*=10;
+		ch=getc(fp);
+	}
+	return a;
+}
+
+void rotate()		//to rotate the 11 base points through 5 degrees
+{			//to get all vertices of the mesh
+  float degree=(3.14159265/180)*5;	//degree of rotation in RADIANS
+
+  float COS=cosf(degree),SIN=sinf(degree);	
+
+  float xx=(a.x)*COS - (a.z)*SIN;
+  float zz=(a.x)*SIN + (a.z)*COS;
+	a.x=xx;
+	a.z=zz;
+	xx=(b.x)*COS - (b.z)*SIN;
+	zz=(b.x)*SIN + (b.z)*COS;
+	b.x=xx;
+	b.z=zz;
+	xx=(c.x)*COS - (c.z)*SIN;
+	zz=(c.x)*SIN + (c.z)*COS;
+	c.x=xx;
+	c.z=zz;
+	xx=(d.x)*COS - (d.z)*SIN;
+	zz=(d.x)*SIN + (d.z)*COS;
+	d.x=xx;
+	d.z=zz;
+	xx=(e.x)*COS - (e.z)*SIN;
+	zz=(e.x)*SIN + (e.z)*COS;
+	e.x=xx;
+	e.z=zz;
+	xx=(f.x)*COS - (f.z)*SIN;
+	zz=(f.x)*SIN + (f.z)*COS;
+	f.x=xx;
+	f.z=zz;
+	xx=(g.x)*COS - (g.z)*SIN;
+	zz=(g.x)*SIN + (g.z)*COS;
+	g.x=xx;
+	g.z=zz;
+	xx=(h.x)*COS - (h.z)*SIN;
+	zz=(h.x)*SIN + (h.z)*COS;
+	h.x=xx;
+	h.z=zz;
+	xx=(j.x)*COS - (j.z)*SIN;
+	zz=(j.x)*SIN + (j.z)*COS;
+	j.x=xx;
+	j.z=zz;
+	xx=(k.x)*COS - (k.z)*SIN;
+	zz=(k.x)*SIN + (k.z)*COS;
+	k.x=xx;
+	k.z=zz;
+	xx=(l.x)*COS - (l.z)*SIN;
+	zz=(l.x)*SIN + (l.z)*COS;
+	l.x=xx;
+	l.z=zz;				//rotate all 11 points through 5 degrees along Y-AXIS
+}
+
+void Reader()		//invoked when reading of file is required
+{
+	FILE* fp;
+	fp=fopen(FNAME,"r");
+	IN[0]=getc(fp);
+	IN[1]=getc(fp);
+	IN[2]=getc(fp);
+	IN[3]='\0';
+	if(strcmp("OFF",IN)!=0)		//check whether it is an OFF file
+	{
+		printf("Invalid Input File.\n");
+		fclose(fp);
+		exit(0);		//if not, terminate program.
+	}
+	char ch=getc(fp);
+	NV=getint(fp);		//get no of vertices
+	NF=getint(fp);		//get no of faces
+	NE=getint(fp);		//get no of edges
+//	printf("OFF\n%d %d %d\n",NV,NV,NE);
+	V=(Vertex *) malloc (sizeof(Vertex)*NV);	//dynamic allocation of space req. to store vertices
+	F=(Face *) malloc (sizeof(Face)*NF);		//and faces. Edges not taken into account.
+	int x=0;
+	Vertex* VT=V;
+	Face* FT=F;
+	printf("Vertices:\n");
+	for(;x<NV;x++,VT++)
+	{
+		VT->x=getfloat(fp);
+		VT->y=getfloat(fp);
+		VT->z=getfloat(fp);
+		printf("%f %f %f\n",VT->x,VT->y,VT->z);		//get x,y,z values for each vertex
+	}
+	printf("Faces:\n");
+	for(x=0;x<NF;x++)	//valid no of vertices for each face is LESS THAN 5.
+	{
+		FT->n=getint(fp);	//get no. of vertices for that face
+		if(FT->n >= 1)
+		{
+			FT->v1=getint(fp);
+			if(FT->n >=2)
+			{
+				FT->v2=getint(fp);
+				if(FT->n >= 3)
+				{
+					FT->v3=getint(fp);
+					if(FT->n >=4)
+					{
+						FT->v4=getint(fp);
+						if(FT->n > 4)
+						{
+							printf("Face made of more than 4 vertices. Program Terminating.\n");
+							fclose(fp);
+							exit(0);
+						}
+					}
+					else
+						FT->v4=-1;
+				}
+				else
+					printf("Warning - Encountered face with less than 3 vertices.\n");  //2 vertices
+			}
+			else
+				printf("Warning - Encountered face with less than 3 vertices.\n");  //1 vertex
+		}
+		//printf("%d - %d %d %d %d\n",FT->n,FT->v1,FT->v2,FT->v3,FT->v4);
+		FT++;		
+	}
+	fclose(fp);
+	printf("File has been Read.\n");
+	exit(0);	//End program
+}
+
+void Writer()
+{
+	FILE* fp;
+	fp=fopen(FNAME,"w");
+	fprintf(fp,"OFF\n%d %d %d\n",NV,NF,NE);	//write no of vertices, faces and edges into the file
+	deCasteljau(tvalue,'s');
+	int x=0,kk=72;		//rotate 72 times
+	float xval,yval,zval;
+	//write vertices:
+	for(;kk>0;kk--)
+	{
+		x=0;
+		for(;x<11;x++)
+		{
+			switch(x)	//one values of x for each vertex
+			{
+			case 0:
+				xval=a.x;
+				yval=a.y;
+				zval=a.z;
+				break;
+			case 1:
+				xval=b.x;
+				yval=b.y;
+				zval=b.z;
+				break;
+			case 2:
+				xval=c.x;
+				yval=c.y;
+				zval=c.z;
+				break;
+			case 3:
+				xval=d.x;
+				yval=d.y;
+				zval=d.z;
+				break;
+			case 4:
+				xval=e.x;
+				yval=e.y;
+				zval=e.z;
+				break;
+			case 5:
+				xval=f.x;
+				yval=f.y;
+				zval=f.z;
+				break;
+			case 6:
+				xval=g.x;
+				yval=g.y;
+				zval=g.z;
+				break;
+			case 7:
+				xval=h.x;
+				yval=h.y;
+				zval=h.z;
+				break;
+			case 8:
+				xval=l.x;
+				yval=l.y;
+				zval=l.z;
+				break;
+			case 9:
+				xval=j.x;
+				yval=j.y;
+				zval=j.z;
+				break;
+			case 10:
+				xval=k.x;
+				yval=k.y;
+				zval=k.z;
+				break;
+			}
+			fprintf(fp,"%f %f %f\n",xval,yval,zval);	//print the x y and z values into the file, linewise
+		}
+		rotate();	//rotate to get new position of the 11 vertices
+	}
+	//faces:
+	kk=0;
+	for(;kk<792;kk++)	//there are 792 faces
+	{
+		if((kk+1)%11==0)	//skip the faces that would start at the last vertex of each bezier curve
+			continue;
+		fprintf(fp,"4 %d %d %d %d\n",(kk%792), ((kk+11)%792), ((kk+12)%792), ((kk+1)%792)); //% for back looping
+					//to the first 11 vertices to complete the surface
+	}
+	fclose(fp);		//close the file
+	free(V);
+	free(F);
+}
+
+void Initial()
+{
+	glClearColor(0.9,0.9,0.9,0.0);
+	glColor3f(0.1,0.1,0.1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glPointSize(4.0);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0.0,640,0.0,480);
+}
+
+void myDisplay()
+{
+	glClear(GL_COLOR_BUFFER_BIT );
+	glColor3d(0.1,0.1,0.1);
+	drawControlPoints();
+	if(i>3)	
+		deCasteljau(tvalue,'d');	//draw the curve IFF all 4 control points have been given
+	glFlush();
+}
+
+void drawControlPoints()	//the var i counts the number of control points that have been inputted by the user
+{				//i is 0 at the start of the program
+	if(i>1)
+	{
+	glBegin(GL_LINES);				//draw the lines
+		glVertex2f(A->x,A->y);
+		glVertex2f(B->x,B->y);
+		if(i>2)
+		{
+			glVertex2f(B->x,B->y);
+			glVertex2f(C->x,C->y);
+			if(i>3)
+			{
+				glVertex2f(C->x,C->y);
+				glVertex2f(D->x,D->y);
+			}
+		}
+	glEnd();
+	}
+	glPointSize(4);
+	glBegin(GL_POINTS);
+	glVertex2f(A->x,A->y);		//draw the 4 control points
+	if(i>1)
+	{
+		glVertex2f(B->x,B->y);
+		if(i>2)
+		{
+			glVertex2f(C->x,C->y);
+			if(i>3)
+				glVertex2f(D->x,D->y);
+		}
+	}
+	glEnd();
+	glPointSize(1);
+}
+
+//this funtion is called only when the WRITE option is selected by the user.
+void deCasteljau(float fraction,char ch)	//de Casteljau's algorithm
+{
+	float t=0;		//the parameter
+	float q1x,q1y,
+		q2x,q2y,
+		q3x,q3y,
+		
+		r1x,r1y,
+		r2x,r2y,
+		
+		px,py;
+		
+	float oldx,oldy;	//values of prev. px and py
+	int ctr=0;	//choose one of the 11 points on the curve used to draw line segments
+	for(;t<=1+(fraction/2);t+=fraction,ctr++)
+	{
+		q1x=t*(B->x)+(1-t)*(A->x);
+		q1y=t*(B->y)+(1-t)*(A->y);
+		q2x=t*(C->x)+(1-t)*(B->x);
+		q2y=t*(C->y)+(1-t)*(B->y);
+		q3x=t*(D->x)+(1-t)*(C->x);
+		q3y=t*(D->y)+(1-t)*(C->y);
+
+		r1x=t*q2x+(1-t)*q1x;
+		r1y=t*q2y+(1-t)*q1y;
+		r2x=t*q3x+(1-t)*q2x;
+		r2y=t*q3y+(1-t)*q2y;
+
+		px=t*r2x+(1-t)*r1x;
+		py=t*r2y+(1-t)*r1y;
+		
+		if(ch=='s')	//when storing the values into the OFF file
+		{		//choose one of 11 points
+			switch(ctr)
+			{
+			case 0:
+				a.x=px;
+				a.y=py;
+				a.z=0;
+				break;
+			case 1:
+				b.x=px;
+				b.y=py;
+				b.z=0;
+				break;
+			case 2:
+				c.x=px;
+				c.y=py;
+				c.z=0;
+				break;
+			case 3:
+				d.x=px;
+				d.y=py;
+				d.z=0;
+				break;
+			case 4:
+				e.x=px;
+				e.y=py;
+				e.z=0;
+				break;
+			case 5:
+				f.x=px;
+				f.y=py;
+				f.z=0;
+				break;
+			case 6:
+				g.x=px;
+				g.y=py;
+				g.z=0;
+				break;
+			case 7:
+				h.x=px;
+				h.y=py;
+				h.z=0;
+				break;
+			case 8:
+				l.x=px;
+				l.y=py;
+				l.z=0;
+				break;
+			case 9:
+				j.x=px;
+				j.y=py;
+				j.z=0;
+				break;
+			case 10:
+				k.x=px;
+				k.y=py;
+				k.z=0;
+				break;
+			}
+		}
+		
+		if(t==0)
+		{
+			oldx=px;
+			oldy=py;
+		}
+		else
+		{
+			if(ch=='d')
+			{
+				glBegin(GL_LINES);
+					glVertex2f(oldx,oldy);
+					glVertex2f(px,py);
+				glEnd();
+			}
+			oldx=px;
+			oldy=py;
+		}
+	}
+}
+
+void motion(int x,int y)		//click and drag motion with control points
+{
+	if(Selected==true)
+	{
+		y=scrht-y;
+		SelectedPoint->x=x;
+		SelectedPoint->y=y;
+		deCasteljau(tvalue,'d');
+		glutPostRedisplay();
+	}
+}
+
+void mouse(int button, int state, int x, int y)
+{
+	y=scrht-y;
+	if(button==GLUT_LEFT_BUTTON && state==GLUT_DOWN)
+	{	
+		if(i<4)
+			switch(i)		// use i to initialize each control point
+			{
+			case 0:
+				A->x=x;
+				A->y=y;
+				i++;
+				break;
+			case 1:
+				if(x==A->x && y==A->y)
+					break;
+				B->x=x;
+				B->y=y;
+				i++;
+				break;
+			case 2:
+				if(x==B->x && y==B->y)
+					break;
+				C->x=x;
+				C->y=y;
+				i++;
+				break;
+			case 3:
+				if(x==C->x && y==C->y)
+					break;
+				D->x=x;
+				D->y=y;
+				i++;
+				break;
+			}
+		else		//moving the control points
+		{
+			if(x-(A->x)>-margin && x-(A->x)<margin && y-(A->y)>-margin && y-(A->y)<margin)
+			{
+				SelectedPoint=A;
+				Selected=true;
+			}
+			else if(x-(B->x)>-margin && x-(B->x)<margin && y-(B->y)>-margin && y-(B->y)<margin)
+			{
+				SelectedPoint=B;
+				Selected=true;
+			}
+			else if(x-(C->x)>-margin && x-(C->x)<margin && y-(C->y)>-margin && y-(C->y)<margin)
+			{
+				SelectedPoint=C;
+				Selected=true;
+			}
+			else if(x-(D->x)>-margin && x-(D->x)<margin && y-(D->y)>-margin && y-(D->y)<margin)
+			{
+				SelectedPoint=D;
+				Selected=true;
+			}
+		}
+	}
+	else
+	{
+		Selected=false;
+	}
+	glutPostRedisplay();	//push to display
+}
+
+void keyboard(unsigned char c,int x,int y)
+{
+	if(c==32)		//when space bar is hit, write mesh to OFF file and terminate program
+	{
+		glutDestroyWindow(win);	//destroy window
+		Writer();		//write
+		printf("\nFile has been Updated. To view mesh, type in cmd:\n...$:geomview filename.off\n\n");
+	}
+	else
+	{
+		printf("Press Space Bar if you have selected four points. Else, press Ctrl+c to exit.\n");
+	}
+}
+
+int main(int argc, char* argv[])
+{
+	if(argc==3)
+	{
+		strcpy(FNAME,argv[2]);
+		int l=strlen(FNAME);
+		if(l<5)
+		{
+			printf("Invalid File Name.\n");
+			return 0;
+		}
+		else if(!(FNAME[l-4]=='.' && FNAME[l-3]=='o' && FNAME[l-2]=='f' && FNAME[l-1]=='f'))
+		{
+			printf("Invalid File Name.\n");
+			return 0;
+		}
+		if(strcmp(argv[1],"r")==0)	//read contents of given .off file
+		{
+			Reader();
+		}
+		else if(strcmp(argv[1],"w")==0)
+		{
+			glutInit(&argc,argv);
+			glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+			glutInitWindowSize(640,480);
+			glutInitWindowPosition(300,200);
+			win=glutCreateWindow("Assignment-3");
+			glutDisplayFunc(myDisplay);
+	
+			glutMouseFunc(mouse);
+			glutMotionFunc(motion);
+			glutPassiveMotionFunc(motion);
+			glutKeyboardFunc(keyboard);
+
+			Initial();
+	
+			printf("Select four points interactively on the newly created window. You can drag and move them around.\n");
+			glutMainLoop();
+		}
+		else
+		{
+			printf("Command line input:\nRead: ./a.out r filename.off\nWrite: ./a.out w filename.off\n");
+			return 0;
+		}
+	}
+	else
+	{
+		printf("Command line input:\nRead:  ./a.out r filename.off\nWrite: ./a.out w filename.off\n");
+		return 0;
+	}
+}
